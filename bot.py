@@ -1,50 +1,39 @@
-import os
-from aiogram import Bot, Dispatcher, Router
-from aiogram.types import Message, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.utils.token import TokenValidationError
 from aiohttp import web
+from aiogram import Bot, Dispatcher, types, Router
+from aiogram.webhook.aiohttp_server import setup_application
 from dotenv import load_dotenv
+import os
 
-# Загрузка переменных окружения
+# Загружаем токен из .env
 load_dotenv()
+API_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Получаем токен и проверяем его корректность
-try:
-    API_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    bot = Bot(token=API_TOKEN)
-except TokenValidationError:
-    print("Неверный токен. Проверьте TELEGRAM_BOT_TOKEN в .env")
-
-# URL вашего веб-приложения
-WEB_APP_URL = "https://fourinarow-production.up.railway.app"  # Ваш новый домен
-
-# Инициализация диспетчера и роутера
+# Создаем бота и диспетчер
+bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 router = Router()
+
+# Обработчик для команды /start
+# @router.message(commands=["start"])
+# async def start_handler(message: types.Message):
+#     await message.answer("Привет! Бот работает.")
+
+# Включаем маршруты в диспетчер
 dp.include_router(router)
 
-# Маршрут для команды /start
-@router.message(lambda message: message.text == "/start")
-async def start_handler(message: Message):
-    web_app = WebAppInfo(url=WEB_APP_URL)
-    button = InlineKeyboardButton(text="Играть в 'Четыре в ряд'", web_app=web_app)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
-    await message.answer("Нажмите на кнопку ниже, чтобы начать игру:", reply_markup=keyboard)
+# Обработчик для вебхука
+async def handle_webhook(request):
+    update = await request.json()  # Получаем обновление от Telegram
+    await dp.feed_update(bot, update)  # Передаём обновление диспетчеру
+    return web.Response(text="OK")  # Ответ Telegram'у
 
-# Вебхуки
-async def on_startup(app):
-    webhook_url = f"{WEB_APP_URL}/webhook"
-    await bot.set_webhook(webhook_url)
-
-async def on_shutdown(app):
-    await bot.session.close()
-
-# Настройка веб-сервера
+# Основная функция для настройки и запуска приложения
 async def main():
-    app = web.Application()
-    app.on_startup.append(on_startup)  # Регистрация функции старта
-    app.on_cleanup.append(on_shutdown)  # Регистрация функции завершения
-    return app
+    app = web.Application()  # Создаём приложение Aiohttp
+    app.router.add_post("/webhook", handle_webhook)  # Регистрируем маршрут для вебхука
+    setup_application(app, dp, bot=bot)  # Настраиваем приложение с диспетчером
+    return app  # Возвращаем готовое приложение
 
+# Запуск приложения на указанном хосте и порту
 if __name__ == "__main__":
     web.run_app(main(), host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
