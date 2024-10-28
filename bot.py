@@ -12,27 +12,26 @@ WEB_APP_URL = 'https://fourinarow-production.up.railway.app'  # URL вашей �
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# Обработчик вебхука
-async def handle_webhook(request):
-    try:
-        # Получаем JSON из запроса и преобразуем в объект Update
-        data = await request.json()
-        update = Update(**data)  # Преобразуем JSON в Update
-
-        # Передаём обновление диспетчеру
-        await dp.feed_update(bot, update)
-        return web.Response(status=200)
-    except Exception as e:
-        print(f"Ошибка при обработке вебхука: {e}")
-        return web.Response(status=500)
-
 # Обработчик команды /start
-@dp.message(commands=['start'])
 async def start_handler(message: types.Message):
     web_app = WebAppInfo(url=WEB_APP_URL)
     button = InlineKeyboardButton("Играть в 'Четыре в ряд'", web_app=web_app)
     keyboard = InlineKeyboardMarkup().add(button)
     await message.answer("Нажмите на кнопку ниже, чтобы начать игру:", reply_markup=keyboard)
+
+# Регистрируем обработчик команды /start
+dp.message.register(start_handler, commands=["start"])
+
+# Обработчик вебхука
+async def handle_webhook(request):
+    try:
+        data = await request.json()
+        update = Update(**data)  # Преобразуем JSON в объект Update
+        await dp.feed_update(bot, update)
+        return web.Response(status=200)
+    except Exception as e:
+        print(f"Ошибка при обработке вебхука: {e}")
+        return web.Response(status=500)
 
 # Настройка веб-приложения
 app = web.Application()
