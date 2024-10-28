@@ -1,4 +1,4 @@
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from aiohttp import web
 from dotenv import load_dotenv
@@ -19,8 +19,8 @@ async def start_handler(message: types.Message):
     keyboard = InlineKeyboardMarkup().add(button)
     await message.answer("Нажмите на кнопку ниже, чтобы начать игру:", reply_markup=keyboard)
 
-# Регистрируем обработчик команды /start
-dp.message.register(start_handler, commands=["start"])
+# Регистрация обработчика с использованием фильтра
+dp.message.register(start_handler, F.text == "/start")
 
 # Обработчик вебхука
 async def handle_webhook(request):
