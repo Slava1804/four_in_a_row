@@ -23,7 +23,7 @@ async def start_handler(message: types.Message):
 dp.message.register(start_handler, F.text == "/start")
 
 # Обработчик вебхука
-async def handle_webhook(request):
+async def handle_webhook(request: web.Request):
     try:
         data = await request.json()
         update = Update(**data)  # Преобразуем JSON в объект Update
@@ -36,6 +36,9 @@ async def handle_webhook(request):
 # Настройка веб-приложения
 app = web.Application()
 app.router.add_post("/webhook", handle_webhook)
+
+# Обслуживание статических файлов (например, HTML страницы)
+app.router.add_static("/static/", path="static", name="static")  # Путь к папке с вашими статическими файлами
 
 if __name__ == '__main__':
     web.run_app(app, host='0.0.0.0', port=int(os.getenv("PORT", 8080)))
